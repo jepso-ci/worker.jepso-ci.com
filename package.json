@@ -1,0 +1,20 @@
+{
+  "name": "worker.jepso-ci.com",
+  "version": "0.0.0",
+  "description": "Trigger the builds and collate the results",
+  "scripts": {
+    "test": "mocha -R spec",
+    "start": "node server.js"
+  },
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "express": "~3.1.0",
+    "q": "~0.9.0",
+    "aws-sdk": "~0.9.5-pre.6",
+    "simple-queue-service": "~1.0.1",
+    "browserify": "~2.4.3",
+    "socket.io": "~0.9.13",
+    "request": "~2.14.0"
+  }
+}
