@@ -5,6 +5,9 @@ var config;
 try { config = require('./config.json'); } catch (ex) {}
 var get = Q.nfbind(require('request').get);
 
+var join = require('path').join;
+var runJob = require('jepso-job-runner');
+
 var express = require('express');
 var app = express();
 var server = module.exports = require('http').createServer(app);
@@ -15,6 +18,18 @@ var region = process.env.WORKER_REGION || (config && config.region);
 var queueName = process.env.WORKER_QUEUE || config.queue;
 var reposTableName = process.env.WORKER_REPOS_TABLE || config['repos-table'];
 var s3BucketName = process.env.WORKER_S3_BUCKET || config['S3-bucket'];
+
+var sauceID = process.env.WORKER_SAUCE || config.sauce;
+var sauceKey = process.env.WORKER_SAUCE_KEY || config['sauce-key'];
+
+var emit = require('./lib/emit');
+
+var throttle = require('throat')(2);
+function sauce(fn) {
+  return throttle(function () {
+    return fn(sauceID, sauceKey);
+  })
+}
 
 var queue = sqs(access, secret, region).createQueue(queueName, {visibilityTimeout: '10 minutes'});
 
@@ -58,9 +73,17 @@ function processMessage(message) {
   var repo = message.body.repo;
   var tag = message.body.tag;
   var buildID = message.body.buildID;
-  //todo: actually run tests
+  console.warn('begin: ' + user + '/' + repo + '/' + tag);
+  return runJob({
+    sauce: sauce,
+    commit: {user: user, repo: repo, tag: tag},
+    buildCreatedTime: Date.now(),
+    directory: join(__dirname, 'output', user, repo, buildID)
+  }, function (name, user, repo, data) {
+    //todo: keep message alive
+    return emit(name, user, repo, data);
+  });
+  //todo: Mark job as complete
 }
-
-//todo: output helpful logs while tests are running
 
 server.listen(3001);
